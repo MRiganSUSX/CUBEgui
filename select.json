@@ -1,0 +1,11 @@
+{
+  "neutrino": {
+    "energy": [10, 100, 500],
+    "evs": [30, 30, 10]
+  },
+  "background": {
+    "energy": ["N/A"],
+    "evs": [30]
+  },
+  "flavours": ["nue", "nue_bar", "numu", "numu_bar", "nutau", "nutau_bar"]
+}
