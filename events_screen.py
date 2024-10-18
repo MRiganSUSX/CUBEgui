@@ -1,13 +1,24 @@
-from kivy.uix.floatlayout import FloatLayout  # Ensure FloatLayout is imported
-from kivy.uix.boxlayout import BoxLayout  # Import BoxLayout for the input layout
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen
-from kivy.uix.spinner import Spinner  # Import Spinner for dropdowns
-from kivy.uix.textinput import TextInput  # Import TextInput for the input box
-from kivy.uix.scrollview import ScrollView  # Import ScrollView for scrolling
-from kivy.graphics import Color, Rectangle  # For creating backgrounds
+from kivy.uix.spinner import Spinner, SpinnerOption
+from kivy.uix.textinput import TextInput
+from kivy.uix.scrollview import ScrollView
+from kivy.graphics import Color, Line
+from kivy.core.text import LabelBase
 import json
+
+# Register the custom font
+LabelBase.register(name='DejaVuSans', fn_regular='fonts/dejavu-sans/DejaVuSans.ttf')
+
+
+# Custom SpinnerOption class to apply font to dropdown items
+class CustomSpinnerOption(SpinnerOption):
+    def __init__(self, **kwargs):
+        super(CustomSpinnerOption, self).__init__(**kwargs)
+        self.font_name = 'DejaVuSans'  # Apply the custom font for each option
 
 
 def load_select():
@@ -20,6 +31,9 @@ def load_select():
 class EventsScreen(Screen):
     def __init__(self, **kwargs):
         super(EventsScreen, self).__init__(**kwargs)
+
+        # Path to the custom font that supports Greek symbols
+        font_path = "DejaVuSans"  # Use the registered font
 
         # Initialize the input rows list
         self.input_rows = []  # Ensure this is defined here
@@ -39,8 +53,8 @@ class EventsScreen(Screen):
         layout.add_widget(title_label)
 
         # Create a BoxLayout for the ScrollView with fixed dimensions
-        input_container = BoxLayout(orientation='vertical', size_hint=(1, 0.6), padding=[0, 0],
-                                    pos_hint={'center_y': 0.55})
+        self.input_container = BoxLayout(orientation='vertical', size_hint=(0.9, 0.6), padding=[30, 10],
+                                         pos_hint={'center_y': 0.55, 'center_x': 0.5})
 
         # Create a ScrollView for the input fields
         scroll_view = ScrollView(size_hint=(1, 1))  # Fill the available space
@@ -60,19 +74,19 @@ class EventsScreen(Screen):
         # Add the input layout to the ScrollView
         scroll_view.add_widget(self.input_layout)
 
-        # Set the background color of the ScrollView to black
-        with scroll_view.canvas.before:
-            Color(0, 0, 0, 1)  # Set color for the background (black)
-            self.bg_rect = Rectangle(pos=(0, 0), size=scroll_view.size)
-
-        # Update the background rectangle on resize
-        scroll_view.bind(size=self.update_bg_rect)
-
         # Add the ScrollView to the input container
-        input_container.add_widget(scroll_view)
+        self.input_container.add_widget(scroll_view)
+
+        # Create a white border around the visible area of the scroll view
+        with self.input_container.canvas.after:
+            self.border_color = Color(1, 1, 1, 1)  # Set color to white
+            self.border_line = Line()
+
+        # Bind size and position changes of the input container to update the border
+        self.input_container.bind(pos=self.update_border, size=self.update_border)
 
         # Add the input container to the main layout
-        layout.add_widget(input_container)
+        layout.add_widget(self.input_container)
 
         # Add "+" button to add more input rows
         add_button = Button(text='+', size_hint=(None, None), size=(30, 30))
@@ -101,10 +115,10 @@ class EventsScreen(Screen):
         # Add the main layout to the screen
         self.add_widget(layout)
 
-    def update_bg_rect(self, instance, value):
-        """Update the position and size of the background rectangle."""
-        self.bg_rect.pos = (0, 0)
-        self.bg_rect.size = instance.size
+    def update_border(self, instance, value):
+        """Update the white border around the input container dynamically."""
+        self.border_line.rectangle = (self.input_container.x, self.input_container.y,
+                                      self.input_container.width, self.input_container.height)
 
     def add_input_row(self, instance=None):
         """Adds a new row of input fields."""
@@ -116,20 +130,28 @@ class EventsScreen(Screen):
             padding=[30, 0]  # Side padding for the new row
         )
 
-        # Prep the dropdown data
+        # Load the data with Greek symbols
         data = load_select()
-        flavour_options = data["flavours"] + ["Background"]
+
+        # Extract flavour symbols for display and names for logic
+        flavour_names = data["flavours"]["name"]
+        flavour_symbols = data["flavours"]["symbol"]
+
+        # Map the symbols to their corresponding names for later use
+        self.symbol_to_name = {symbol: name for name, symbol in zip(flavour_names, flavour_symbols)}
+
+        # Display symbols in the dropdown but use names for internal logic
+        flavour_options = flavour_symbols + ["Background"]
 
         # Dropdown 1 (Spinner)
         dropdown1 = Spinner(
             text='Flavour',
-            values=flavour_options,  # Example options
+            values=flavour_options,  # Show the symbols in the dropdown
             size_hint=(20 / 100, None),  # Set size hint ratio
-            height=40
+            height=40,
+            font_name="DejaVuSans",  # Use the registered font for the selected item
+            option_cls=CustomSpinnerOption  # Apply the custom SpinnerOption class for dropdown items
         )
-        dropdown1.bind(text=self.update_energy_dropdown)  # Bind the first dropdown
-
-        input_row.add_widget(dropdown1)
 
         # Dropdown 2 (Spinner)
         dropdown2 = Spinner(
@@ -137,9 +159,9 @@ class EventsScreen(Screen):
             values=[],  # Initially empty
             size_hint=(20 / 100, None),  # Set size hint ratio
             height=40,
-            disabled=True  # Initially disabled
+            disabled=True,  # Initially disabled
+            font_name="DejaVuSans"  # Use the registered font
         )
-        input_row.add_widget(dropdown2)
 
         # Text Input Box with centered text
         text_input = TextInput(
@@ -149,9 +171,18 @@ class EventsScreen(Screen):
             halign='center',  # Center text horizontally
             multiline=False,  # Set to False to keep it a single line
             padding_y=(10, 10),  # Add vertical padding for centering effect
-            disabled=True  # Initially disabled
+            disabled=True,  # Initially disabled
+            font_name="DejaVuSans"  # Use the registered font
         )
-        text_input.bind(on_text_validate=lambda instance: self.validate_input(instance, text_input.text, data))  # Bind to validation method
+
+        # Bind the flavour dropdown to update the energy dropdown for the specific row
+        dropdown1.bind(text=lambda spinner, text: self.update_energy_dropdown(spinner, text, dropdown2, text_input))
+
+        # Bind text validation to the on_text_validate event (pressing "Enter")
+        text_input.bind(on_text_validate=lambda instance: self.validate_input(text_input, text_input.text, data))
+
+        input_row.add_widget(dropdown1)
+        input_row.add_widget(dropdown2)
         input_row.add_widget(text_input)
 
         # Add the new input row to the main input layout (stacking below)
@@ -160,37 +191,61 @@ class EventsScreen(Screen):
         # Store the input row in the list for later access
         self.input_rows.append((dropdown1, dropdown2, text_input))
 
-    def update_energy_dropdown(self, spinner, text):
-        """Update the second dropdown based on the selection in the first dropdown."""
+    def update_energy_dropdown(self, spinner, text, dropdown2, text_input):
+        """Update the second dropdown (energy) based on the selection in the first dropdown (flavour)."""
         data = load_select()
 
-        if text == "Background":
+        # Map the selected symbol back to its corresponding name
+        flavour_name = self.symbol_to_name.get(text, text)  # Get the name or use 'text' if it's 'Background'
+
+        if flavour_name == "Background":
             energy_options = data["background"]["energy"]
+            evs_limits = data["background"]["evs"]
         else:
             energy_options = data["neutrino"]["energy"]
+            evs_limits = data["neutrino"]["evs"]
 
         # Ensure energy options are strings
         energy_options = [str(option) for option in energy_options]
 
-        if self.input_rows:
-            last_row = self.input_rows[-1][1]  # Get the dropdown2 from the last input row
-            last_row.values = energy_options  # Set new values for the second dropdown
-            last_row.text = energy_options[0] if energy_options else ''  # Reset selection
-            last_row.disabled = False  # Enable the energy dropdown
+        # Update the energy dropdown for the specific row
+        dropdown2.values = energy_options  # Set new values for the second dropdown
+        dropdown2.text = energy_options[0] if energy_options else ''  # Reset selection
+        dropdown2.disabled = False  # Enable the energy dropdown
 
-            # Enable the text input box for event numbers
-            last_text_input = self.input_rows[-1][2]  # Get the TextInput from the last input row
-            last_text_input.disabled = False  # Enable the text input
+        # Enable the text input box for event numbers
+        text_input.disabled = False  # Enable the text input
+
+        # Bind the energy dropdown to dynamically adjust the limit based on the selected energy
+        dropdown2.bind(text=lambda spinner, energy_text: self.update_event_limit(text_input, energy_text, evs_limits))
+
+    def update_event_limit(self, text_input, energy_text, evs_limits):
+        """Update the limit for event numbers based on the selected energy."""
+        try:
+            # Check if energy_text is 'N/A' (for Background)
+            if energy_text == "N/A":
+                event_limit = evs_limits[0]  # Background has only one limit
+            else:
+                # Otherwise, convert energy_text to an integer and find the corresponding limit
+                energy_index = self.input_rows[-1][1].values.index(str(energy_text))  # Get the index
+                event_limit = evs_limits[energy_index]
+
+            # Set the event limit on the text input (store it for validation)
+            text_input.event_limit = event_limit
+            print(f"Event limit for energy {energy_text}: {event_limit}")
+        except (ValueError, IndexError) as e:
+            # Handle the case where energy_text is not a valid index or out of bounds
+            text_input.event_limit = 30  # Set a default limit if necessary
+            print(f"Failed to update event limit for energy {energy_text}: {str(e)}.")
 
     def validate_input(self, instance, value, data):
         """Validate the input to ensure it only contains integers or arrays of integers."""
         if value.strip() == "":
-            return False  # Ignore empty input
+            return False  # Ignore empty input and mark invalid
 
-        # Get the maximum value from the evs limit
-        max_value = max(data["neutrino"]["evs"]) if data["neutrino"]["evs"] else 0
+        # Get the maximum value from the evs limit (stored in the input field)
+        max_value = getattr(instance, 'event_limit', 30)  # Default to 30 if no event limit is set
 
-        # Check if the input is a single integer, a list of integers, or a range
         try:
             # Allow comma-separated values, and ranges like "1-10"
             if '-' in value:
@@ -198,51 +253,57 @@ class EventsScreen(Screen):
                 start, end = int(start.strip()), int(end.strip())
                 if start > max_value or end > max_value or start > end:
                     instance.text = ''  # Clear input if the range exceeds the limit or is invalid
-                    return False
+                    return False  # Invalid input
             elif ',' in value:
                 # Split the input by commas and convert to integers
                 int_list = [int(num.strip()) for num in value.split(',')]
                 if any(num > max_value for num in int_list):
                     instance.text = ''  # Clear the input if any number exceeds the limit
-                    return False
+                    return False  # Invalid input
             else:
                 # Single integer input
                 num = int(value)
                 if num > max_value:
                     instance.text = ''  # Clear the input if it exceeds the limit
-                    return False
+                    return False  # Invalid input
 
+            # If the input is valid, return True
+            return True
         except ValueError:
+            # If the input is not a valid integer or range, clear it and return False
             instance.text = ''  # Clear the input if it's not a valid integer or list
             return False
-
-        return True  # Input is valid
 
     def submit_data(self, instance, mode):
         """Collects data from all input rows and handles submission logic."""
         data = load_select()  # Load data for validation
-        valid_submission = True  # Flag to track if all inputs are valid
+        valid_submission_found = False  # Track if at least one valid submission is found
 
         for dropdown1, dropdown2, text_input in self.input_rows:
-            selected_option1 = dropdown1.text
+            selected_option1_symbol = dropdown1.text
             selected_option2 = dropdown2.text
             entered_text = text_input.text
 
-            # Validate the input before processing it
-            if not self.validate_input(text_input, entered_text, data):  # Validate during submission
-                valid_submission = False  # Mark the submission as invalid
-                print(f'Invalid input for: {selected_option1}, {selected_option2}')
-                continue  # Skip to the next row
+            # Map the selected symbol to its corresponding name
+            selected_option1_name = self.symbol_to_name.get(selected_option1_symbol, selected_option1_symbol)
 
-            # If the input is valid, proceed with submission
+            # Validate the input again before processing it
+            if not self.validate_input(text_input, entered_text, data):  # Validate during submission
+                print(f'Invalid input for: {selected_option1_name}, {selected_option2}')
+                continue  # Skip to the next row if validation fails
+
+            # If the input is valid, set the flag to True and proceed with submission
+            valid_submission_found = True  # At least one valid submission is found
             print(
-                f'Selected Option 1: {selected_option1}, Selected Option 2: {selected_option2}, '
+                f'Selected Option 1: {selected_option1_name}, Selected Option 2: {selected_option2}, '
                 f'Entered Text: {entered_text}'
             )
 
-        # Optionally handle the case if there are no valid submissions
-        if not valid_submission:
-            print("Submission failed due to invalid inputs.")
+        # Handle the case if no valid submissions were found
+        if not valid_submission_found:
+            print("Submission failed: No valid rows found.")
+        else:
+            print("Submission successful: At least one valid row was submitted.")
 
     def go_back(self, instance):
         # This will transition back to the first screen

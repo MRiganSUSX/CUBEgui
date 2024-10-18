@@ -7,5 +7,15 @@
     "energy": ["N/A"],
     "evs": [30]
   },
-  "flavours": ["nue", "nue_bar", "numu", "numu_bar", "nutau", "nutau_bar"]
+  "flavours": {
+    "name": ["nue", "nue_bar", "numu", "numu_bar", "nutau", "nutau_bar"],
+    "symbol": [
+      "\u03BD\u005F\u0065",
+      "\u03BD\u0304\u005F\u0065",
+      "\u03BD\u005F\u03BC",
+      "\u03BD\u0304\u005F\u03BC",
+      "\u03BD\u005F\u03C4",
+      "\u03BD\u0304\u005F\u03C4"
+      ]
+  }
 }
