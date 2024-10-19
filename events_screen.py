@@ -205,7 +205,7 @@ class EventsScreen(Screen):
             energy_options = data["neutrino"]["energy"]
             evs_limits = data["neutrino"]["evs"]
 
-        # Ensure energy options are strings
+        # Convert energy options to strings for consistency
         energy_options = [str(option) for option in energy_options]
 
         # Update the energy dropdown for the specific row
@@ -226,8 +226,8 @@ class EventsScreen(Screen):
             if energy_text == "N/A":
                 event_limit = evs_limits[0]  # Background has only one limit
             else:
-                # Otherwise, convert energy_text to an integer and find the corresponding limit
-                energy_index = self.input_rows[-1][1].values.index(str(energy_text))  # Get the index
+                # Convert energy_text to a string and get the index
+                energy_index = self.input_rows[-1][1].values.index(str(energy_text))  # Get the index of the energy
                 event_limit = evs_limits[energy_index]
 
             # Set the event limit on the text input (store it for validation)
